@@ -98,6 +98,31 @@ MyBatis DEBUG 三件套（都在 `content` 里，可全文检索）：
 - `sls_window.py "YYYY-MM-DD HH:MM:SS" "YYYY-MM-DD HH:MM:SS"` —— 秒级时间窗全量拉取，用于观察某次定时任务/异常时刻的完整上下文。
 - `sls_order.py <订单号> [hours]` —— 由新到旧看某个单号的状态流转。
 - `sls_savecompare.py <logstore> <keyword> <hours> [max_lines]` —— **save 类接口的"参数变更比对"通用工具**，自动处理坑 F/G/H：按 URI 里的 `/app/` 自动区分 PC/APP 端点、按「整单快照=整体替换 / 增量=按业务主键更新」做状态叠加、自动提取行尾操作人(工号)。把 `keyword` 直接拼上订单号（如 `"saveOrderQuantity BHCG1039HF2258261018-1"`）可只拉目标单。关键参数：`--list-key`(物料列表字段,默认 merchandiseListSaveList) / `--item-key`(业务主键,默认 merchandiseCode) / `--owner-key`+`--owner-value`(按订单号过滤) / `--qty-keys`(比对的数量字段,逗号分隔) / `--del-key`(删除列表字段) / `--cache <raw.json>`(跳过 SLS 复用落盘数据)。产出 `savecompare_report.md` + `savecompare_changes.csv`(逐次改动长表: 步骤/时间/端点/操作人/改动类型/物料/前后值) + `savecompare_final_vs_initial.csv`(全量初始↔最终)。
+- `sls_savecompare_html.py --order <报货单号> --store <门店storeCode> [--src <数据来源>] [--window <时间窗>] [--indir <产物目录>] [--out <文件名>]` —— **把上一条的产物转成自包含汇总 HTML**（可直接分享/发布）。产出结构固定：概览卡（保存次数/PC+APP/操作人/物料初始→最终/新增/净变更）→ 操作人视角 → 完整改动流水（按时间升序，每步带端点/操作人/整单或增量/逐条物料变化）→ 变动点速览（新增/删除/减量/增量Top8）→ 订货量净变更全表。样式为统一的「报货单改动流水汇报」标准样式，**生成结果可直接对外分享**。
+
+### 报货单改动 → 汇总 HTML（标准收尾流程）
+查某个报货单的修改记录并出汇总 HTML，固定走这两步：
+
+```
+# 1) 拉数据 + 状态叠加比对（PC/APP 自动分离、操作人工号自动提取）
+SLS_PROJECT=... SLS_LOGSTORE=... \
+python sls_savecompare.py <module>-backend \
+    "saveOrderQuantity <订单号>" 40 \
+    --owner-key orderCode --owner-value <订单号> --out-dir out
+
+# 2) 生成汇报 HTML（样式统一）
+python sls_savecompare_html.py \
+    --order <订单号> --store <门店storeCode> \
+    --src "<module>-backend（阿里云 SLS）" \
+    --window "YYYY-MM-DD HH:MM:SS ~ YYYY-MM-DD HH:MM:SS" \
+    --indir out --out save_order_report.html
+```
+
+要点：
+- 第 2 步**只依赖**第 1 步的 `savecompare_raw.json` + `savecompare_final_vs_initial.csv`，可反复重跑生成 HTML，不必重复打 SLS 接口。
+- HTML 的时间线是从 `raw.json` **重放状态叠加**重建的（**不要**直接读 `changes.csv`），因为 `changes.csv` 的端点/分步判定有 bug 会算错。
+- `--qty-key` 默认 `orderQuantity`，对应 `final_vs_initial.csv` 的 `init_/final_/delta_orderQuantity` 列；若比对时改了 `--qty-keys`，这里要同步传 `--qty-key`。
+- 运行时会把口径数字打印到终端（`操作步/PC/APP/初始→最终/新增/删除/净变更/增量/减量`），**先核对再交付**。
 
 **坑 E：定时任务日志没有 traceId。** xxl-job 打出来的是 `[ ] [ Thread-44]`（方括号内为空），只能靠**秒级时间窗**或接口名去定位，别指望 traceId 串联。找"某张表为什么被改了"时，`sls_window.py` 比 trace 追踪更快。
 
