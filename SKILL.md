@@ -84,7 +84,7 @@ python sls_analyze.py 15   # 近 15 分钟，参数可改 30/60
 python sls_trace.py 24 <门店号>     # 近 24 小时；门店号必填，裸号会自动补 1_ 前缀
 ```
 
-日志格式为 `[traceId spanId]`，例：`[d2e2f16306adaf84 d2e2f16306adaf84]`。同一 traceId 下跨线程（XNIO-1 task-N、openStoreExecutorN）的日志都能串起来。
+日志格式为 `[traceId spanId]`，例：`[<traceId> <spanId>]`。同一 traceId 下跨线程（XNIO-1 task-N、openStoreExecutorN）的日志都能串起来。
 
 MyBatis DEBUG 三件套（都在 `content` 里，可全文检索）：
 - `xxxMapper方法名: ==>  Preparing: <带 ? 的 SQL>`
@@ -98,8 +98,8 @@ MyBatis DEBUG 三件套（都在 `content` 里，可全文检索）：
 
 ### 配套脚本
 - `sls_chain.py <traceId> [hours]` —— 把整条链路压成 `PREPARE / PARAMS / RESULT(Total|Updates) / ASPECT` 摘要行，快速看清做了哪些 SQL。
-- `sls_merch.py <物料码> [hours] [traceId,...]` —— 按业务主键（物料码/订单号）定位命中位置，**并自动带上紧随其后的 `<== Total/Updates` 行**（结果行本身不含业务主键，必须带上才知道执行是否成功）。
-- `sls_window.py "YYYY-MM-DD HH:MM:SS" "YYYY-MM-DD HH:MM:SS"` —— 秒级时间窗全量拉取，用于观察某次定时任务/异常时刻的完整上下文。
+- `sls_merch.py <物料码> [hours] <traceId[,traceId,...]>` —— 按业务主键（物料码/订单号）定位命中位置，**并自动带上紧随其后的 `<== Total/Updates` 行**（结果行本身不含业务主键，必须带上才知道执行是否成功）。**traceId 必填**（会过期，脚本不内置任何默认值），可先用 `sls_trace.py` / `sls_search.py` 拿到。
+- `sls_window.py "YYYY-MM-DD HH:MM:SS" "YYYY-MM-DD HH:MM:SS" [max_lines]` —— 秒级时间窗全量拉取（时间按**东八区**解释，与本机时区无关），用于观察某次定时任务/异常时刻的完整上下文。
 - `sls_order.py <订单号> [hours]` —— 由新到旧看某个单号的状态流转。
 - `sls_savecompare.py <logstore> <keyword> <hours> [max_lines]` —— **save 类接口的"参数变更比对"通用工具**，自动处理坑 F/G/H：按 URI 里的 `/app/` 自动区分 PC/APP 端点、按「整单快照=整体替换 / 增量=按业务主键更新」做状态叠加、自动提取行尾操作人(工号)。把 `keyword` 直接拼上订单号（如 `"saveOrderQuantity <订单号>"`）可只拉目标单。关键参数：`--list-key`(物料列表字段,默认 merchandiseListSaveList) / `--item-key`(业务主键,默认 merchandiseCode) / `--owner-key`+`--owner-value`(按订单号过滤) / `--qty-keys`(比对的数量字段,逗号分隔) / `--del-key`(删除列表字段) / `--cache <raw.json>`(跳过 SLS 复用落盘数据)。产出 `savecompare_report.md` + `savecompare_changes.csv`(逐次改动长表: 步骤/时间/端点/操作人/改动类型/物料/前后值) + `savecompare_final_vs_initial.csv`(全量初始↔最终)。
 - `sls_savecompare_html.py --order <报货单号> --store <门店storeCode> [--src <数据来源>] [--window <时间窗>] [--indir <产物目录>] [--out <文件名>]` —— **把上一条的产物转成自包含汇总 HTML**（可直接分享/发布）。产出结构固定：概览卡（保存次数/PC+APP/操作人/物料初始→最终/新增/净变更）→ 操作人视角 → 完整改动流水（按时间升序，每步带端点/操作人/整单或增量/逐条物料变化）→ 变动点速览（新增/删除/减量/增量Top8）→ 订货量净变更全表。样式为统一的「报货单改动流水汇报」标准样式，**生成结果可直接对外分享**。

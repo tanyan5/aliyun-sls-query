@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-"""找今天最新的 /inc/dataCenter/syncStoreEstQuantity 请求，并定位 1200002156 的入参 est* 字段。"""
+"""找今天最新的 /inc/dataCenter/syncStoreEstQuantity 请求；若给定物料编码，再定位它的入参 est* 字段。
+
+用法: python sls_today.py [hours] [物料编码]
+"""
 import sys, json, time, hmac, hashlib, base64, urllib.parse, urllib.request, urllib.error, re
 from email.utils import formatdate
 
@@ -89,7 +92,7 @@ def tstr(r):
 
 if __name__ == "__main__":
     hours = int(sys.argv[1]) if len(sys.argv) > 1 else 24
-    merch = sys.argv[2] if len(sys.argv) > 2 else "1200002156"
+    merch = sys.argv[2] if len(sys.argv) > 2 else None
     now = int(time.time())
     frm, to = now - hours * 3600, now
     print("窗口: %s ~ %s" % (
@@ -127,24 +130,28 @@ if __name__ == "__main__":
 
     # 在 body 里定位该物料的入参块（含 estQuantity / estQuality 等字段）
     # 兼容 JSON 风格 / 紧凑风格
-    for pat in [r'\{[^{}]*1200002156[^{}]*\}', r'"merchandiseCode"\s*:\s*"1200002156".{0,400}']:
-        for mm in re.finditer(pat, c):
-            seg = mm.group(0)
-            print("\n--- 命中物料块 ---")
-            print(seg[:700])
-            # 提取 est* 字段
-            for fld in re.findall(r'"(est[A-Za-z]+)"\s*:\s*("?-?\d+\.?\d*"?|null)', seg):
-                print("  字段:", fld)
+    if not merch:
+        print("\n(未指定物料编码，跳过入参字段定位；如需定位请加第二个参数传物料编码)")
+    else:
+        mc = re.escape(merch)
+        for pat in [r'\{[^{}]*' + mc + r'[^{}]*\}', r'"merchandiseCode"\s*:\s*"' + mc + r'".{0,400}']:
+            for mm in re.finditer(pat, c):
+                seg = mm.group(0)
+                print("\n--- 命中物料块 ---")
+                print(seg[:700])
+                # 提取 est* 字段
+                for fld in re.findall(r'"(est[A-Za-z]+)"\s*:\s*("?-?\d+\.?\d*"?|null)', seg):
+                    print("  字段:", fld)
 
-    # 也全局搜 estQuality / estQuantity 紧跟 1200002156 上下文
-    for kw in ['estQuality', 'estQuantity']:
-        idx = c.find('1200002156')
-        while idx != -1:
-            window = c[max(0, idx - 200): idx + 200]
-            if kw in window:
-                print("\n[上下文] %s 出现在 1200002156 附近:" % kw)
-                print(window)
-            idx = c.find('1200002156', idx + 1)
+        # 也全局搜 estQuality / estQuantity 紧跟该物料编码的上下文
+        for kw in ['estQuality', 'estQuantity']:
+            idx = c.find(merch)
+            while idx != -1:
+                window = c[max(0, idx - 200): idx + 200]
+                if kw in window:
+                    print("\n[上下文] %s 出现在 %s 附近:" % (kw, merch))
+                    print(window)
+                idx = c.find(merch, idx + 1)
 
     print("\n======== traceId %s 用于下一步追链路 =====" % tid)
     with open("latest_tid.txt", "w", encoding="utf-8") as f:
