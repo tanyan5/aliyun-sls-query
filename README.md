@@ -2,6 +2,46 @@
 
 WorkBuddy / Agent 技能：直接查询阿里云 SLS 日志服务（无需安装 SDK，纯 Python + 签名），覆盖任意 `<module>-backend` 等项目（如 inc-backend / acc-backend / interface-backend）的日志检索、traceId 串联、ERROR 统计，以及对 save 类接口做「状态叠加」参数比对；project / logstore 通过环境变量切换，可查 AK 权限内的任意目标。
 
+## 首次使用（需要配两样东西）
+
+克隆后默认值都是**占位符**，必须先配好下面两项才能查日志（脚本内不含任何密钥或具体 project 名）。
+
+### ① AK/SK（身份）
+
+任选其一，优先级从高到低：
+
+```bash
+# 推荐：环境变量
+export ALIBABA_CLOUD_ACCESS_KEY_ID=<你的 AccessKeyId>
+export ALIBABA_CLOUD_ACCESS_KEY_SECRET=<你的 AccessKeySecret>
+```
+- 或写进 `~/.workbuddy/mcp.json` 的 `mcpServers.alibabacloud-sls.env.*`
+- 或使用 `aliyun` CLI 的 `~/.aliyun/config.json`
+
+### ② 查询目标（project / logstore）
+
+```bash
+export SLS_PROJECT=k8s-log-xxxxxxxxxxxxxxxx          # 日志项目名（形如 k8s-log-<hash>）
+export SLS_LOGSTORE=<module>-backend                 # 如 inc-backend / acc-backend
+export SLS_ENDPOINT=cn-hangzhou.log.aliyuncs.com     # 可选，默认杭州
+```
+
+或在本目录 `scripts/sls_defaults.local.json` 里写（该文件已被 gitignore，不会提交）：
+
+```json
+{"project":"k8s-log-xxxxxxxx","logstore":"<module>-backend","endpoint":"cn-hangzhou.log.aliyuncs.com"}
+```
+
+> 不知道 project 名？先设 `SLS_PROJECT`，再跑 `python scripts/sls_probe.py` 探测可访问的 region 与 logstore 列表。
+
+### 验证
+
+```bash
+python scripts/sls_query.py     # 应返回 code=200 与近 15 分钟日志
+```
+
+> 两项任一未配置时，脚本会**直接给出明确的配置指引**（不会静默返回「命中 0 条」让你误以为没日志）。
+
 ## 功能
 
 - 项目 / region 自动探测（`sls_probe.py`）

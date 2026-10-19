@@ -7,11 +7,12 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from sls_auth import load_credentials, load_defaults
+from sls_auth import load_credentials, load_defaults, require_target
 _defaults = load_defaults()
 AK, SK = load_credentials()
 
 PROJECT = os.environ.get("SLS_PROJECT", _defaults.get("project", "k8s-log-<project-id>"))
+require_target(project=PROJECT)
 
 REGIONS = [
     "cn-hangzhou", "cn-beijing", "cn-shanghai", "cn-shenzhen", "cn-guangzhou",

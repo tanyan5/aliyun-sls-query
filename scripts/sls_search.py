@@ -12,12 +12,13 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import os, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from sls_auth import load_credentials, load_defaults
+from sls_auth import load_credentials, load_defaults, require_target
 _defaults = load_defaults()
 AK, SK = load_credentials()
 
 PROJECT  = os.environ.get("SLS_PROJECT", _defaults.get("project", "k8s-log-<project-id>"))
 ENDPOINT = os.environ.get("SLS_ENDPOINT", _defaults.get("endpoint", "cn-hangzhou.log.aliyuncs.com"))
+require_target(project=PROJECT, endpoint=ENDPOINT)
 
 
 def sign(method, uri_path, query, headers):
@@ -111,7 +112,8 @@ def tstr(r):
 
 
 if __name__ == "__main__":
-    logstore = sys.argv[1] if len(sys.argv) > 1 else "<module>-backend"
+    logstore = sys.argv[1] if len(sys.argv) > 1 else _defaults.get("logstore", "<module>-backend")
+    require_target(logstore=logstore)
     query = sys.argv[2] if len(sys.argv) > 2 else "delOrder"
     hours = int(sys.argv[3]) if len(sys.argv) > 3 else 24
     max_lines = int(sys.argv[4]) if len(sys.argv) > 4 else 100

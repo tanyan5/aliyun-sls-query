@@ -9,7 +9,25 @@
 """
 import os
 import json
+import sys
 import pathlib
+
+
+def _install_clean_errors():
+    """让配置类错误（RuntimeError）以友好文本输出，而不是整段 traceback。
+
+    仅拦截 RuntimeError（本模块只用于 AK/SK 与查询目标两类配置报错），
+    其他异常仍走默认 traceback，不影响调试。
+    """
+    def _hook(etype, value, tb):
+        if issubclass(etype, RuntimeError):
+            sys.stderr.write(str(value).rstrip() + "\n")
+            sys.exit(1)
+        sys.__excepthook__(etype, value, tb)
+    sys.excepthook = _hook
+
+
+_install_clean_errors()
 
 
 def _load_json(path):
@@ -52,6 +70,43 @@ def load_credentials():
         "  1) 设置环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET\n"
         "  2) 在 ~/.workbuddy/mcp.json 的 mcpServers.alibabacloud-sls.env 中填入\n"
         "  3) 安装 aliyun CLI 并配置 ~/.aliyun/config.json"
+    )
+
+
+def require_target(project="", logstore="", endpoint=""):
+    """校验查询目标是否仍是占位符；未配置时抛出清晰、可操作的报错。
+
+    背景：脱敏后默认值是占位符（k8s-log-<project-id> / <module>-backend）。
+    若新用户克隆仓库后未配置目标，请求会打到一个不存在的 project，
+    表现为「HTTP 502 / 命中 0 条」——极易误判为"确实没有日志"。
+    故在真正发起请求前先拦截，明确告诉用户该怎么配。
+
+    参数传空串表示「这一项不需要校验」。
+    """
+    missing = []
+    if project and "<project-id>" in project:
+        missing.append("SLS_PROJECT")
+    if logstore and "<module>" in logstore:
+        missing.append("SLS_LOGSTORE")
+    if endpoint and "<region>" in endpoint:
+        missing.append("SLS_ENDPOINT")
+    if not missing:
+        return
+    raise RuntimeError(
+        "❌ SLS 查询目标尚未配置（%s 仍是占位符，当前 project=%r / logstore=%r）。\n"
+        "   这不是「没有日志」，而是还没告诉脚本查询哪个 project / logstore。\n"
+        "请任选一种方式配置后重试：\n"
+        "   1) 环境变量（推荐）:\n"
+        "        export SLS_PROJECT=k8s-log-xxxxxxxxxxxxxxxx\n"
+        "        export SLS_LOGSTORE=<module>-backend        # 如 inc-backend / acc-backend\n"
+        "        export SLS_ENDPOINT=cn-hangzhou.log.aliyuncs.com   # 可选，默认杭州\n"
+        "   2) 在 scripts/ 目录下新建 sls_defaults.local.json:\n"
+        "        {\"project\":\"k8s-log-xxxxxxxx\",\"logstore\":\"<module>-backend\",\"endpoint\":\"cn-hangzhou.log.aliyuncs.com\"}\n"
+        "   3) 不确定 project 名时，先设 SLS_PROJECT 再跑 sls_probe.py 探测可访问的 region / logstore。\n"
+        "   注：AK/SK 是另一项配置，见 load_credentials() 的报错提示。"
+        % (
+            "、".join(missing), project, logstore,
+        )
     )
 
 

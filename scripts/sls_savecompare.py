@@ -28,7 +28,7 @@ from collections import OrderedDict, Counter
 sys.stdout.reconfigure(encoding='utf-8')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sls_search import fetch_all, operator_of, endpoint_of, RE_URI, RE_TID, tstr  # noqa
-from sls_auth import load_defaults  # noqa
+from sls_auth import load_defaults, require_target  # noqa
 
 _DEFAULTS = load_defaults()
 
@@ -356,6 +356,7 @@ def main():
     ap.add_argument("--out-dir", default=".")
     ap.add_argument("--include-failed", action="store_true")
     args = ap.parse_args()
+    require_target(logstore=args.logstore)
 
     cfg = {
         "keyword": args.keyword,

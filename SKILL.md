@@ -23,7 +23,11 @@ agent_created: true
 - `SLS_ENDPOINT` —— 默认 `cn-hangzhou.log.aliyuncs.com`（占位 `cn-<region>.log.aliyuncs.com`）
 - `SLS_LOGSTORE` —— 默认读 `scripts/sls_defaults.local.json`（占位 `<module>-backend`）
 
-改查询目标时也可直接编辑对应脚本顶部的同名常量。
+**未配置目标时脚本会主动拦截**：所有脚本在发起请求前调用 `sls_auth.require_target()`，若 project/logstore 仍是占位符，会直接打印配置指引并以非 0 退出（**不会**打到一个不存在的 project 后静默返回「命中 0 条」）。AK 缺失同理，由 `load_credentials()` 给出三种配置方式。两类配置报错都以友好文本输出（已设置 `sys.excepthook`），不带 traceback。
+
+> **首次使用引导**：若用户是新克隆仓库、尚未配置 AK 或 project/logstore，直接按 README 的「首次使用」章节引导他配 `ALIBABA_CLOUD_ACCESS_KEY_ID/SECRET` 与 `SLS_PROJECT/SLS_LOGSTORE`；不确定 project 名时用 `sls_probe.py` 探测。
+
+改查询目标时优先用环境变量或 `sls_defaults.local.json`（脚本顶部常量仅作最后兜底）。
 
 ## 1.5 已知可访问的 SLS 项目（环境）
 
