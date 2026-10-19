@@ -3,3 +3,7 @@ __pycache__/
 *.pyo
 .DS_Store
 *.tmp
+
+# 本机默认 SLS 目标（含具体 project/logstore），不随仓库发布，避免泄露具体环境名
+sls_defaults.local.json
+*.local.json

@@ -2,8 +2,8 @@
 """按关键字 / URI 在指定 logstore 检索日志，支持按 traceId 追链路。
 用法:
   python sls_search.py <logstore> <query> <hours> [max_lines]
-  python sls_search.py inc-backend delOrder 24
-  python sls_search.py inc-backend "routineOrder/delOrder" 24 50
+  python sls_search.py <module>-backend delOrder 24
+  python sls_search.py <module>-backend "routineOrder/delOrder" 24 50
 """
 import sys, json, time, hmac, hashlib, base64, urllib.parse, urllib.request, urllib.error, re
 from email.utils import formatdate
@@ -12,11 +12,12 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import os, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from sls_auth import load_credentials
+from sls_auth import load_credentials, load_defaults
+_defaults = load_defaults()
 AK, SK = load_credentials()
 
-PROJECT  = os.environ.get("SLS_PROJECT", "k8s-log-c690075cfa6764ccda7b33582e001db23")
-ENDPOINT = os.environ.get("SLS_ENDPOINT", "cn-hangzhou.log.aliyuncs.com")
+PROJECT  = os.environ.get("SLS_PROJECT", _defaults.get("project", "k8s-log-<project-id>"))
+ENDPOINT = os.environ.get("SLS_ENDPOINT", _defaults.get("endpoint", "cn-hangzhou.log.aliyuncs.com"))
 
 
 def sign(method, uri_path, query, headers):
@@ -110,7 +111,7 @@ def tstr(r):
 
 
 if __name__ == "__main__":
-    logstore = sys.argv[1] if len(sys.argv) > 1 else "inc-backend"
+    logstore = sys.argv[1] if len(sys.argv) > 1 else "<module>-backend"
     query = sys.argv[2] if len(sys.argv) > 2 else "delOrder"
     hours = int(sys.argv[3]) if len(sys.argv) > 3 else 24
     max_lines = int(sys.argv[4]) if len(sys.argv) > 4 else 100

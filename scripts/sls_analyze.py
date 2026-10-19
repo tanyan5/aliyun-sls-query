@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""拉取 inc-backend 近15分钟全部日志，本地解析统计请求分布"""
+"""拉取指定 logstore 近15分钟全部日志，本地解析统计请求分布"""
 import sys, json, re, time
 from collections import Counter, defaultdict
 

@@ -9,11 +9,12 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import os, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from sls_auth import load_credentials
+from sls_auth import load_credentials, load_defaults
+_defaults = load_defaults()
 AK, SK = load_credentials()
 
-PROJECT  = os.environ.get("SLS_PROJECT", "k8s-log-c690075cfa6764ccda7b33582e001db23")
-ENDPOINT = os.environ.get("SLS_ENDPOINT", "cn-hangzhou.log.aliyuncs.com")
+PROJECT  = os.environ.get("SLS_PROJECT", _defaults.get("project", "k8s-log-<project-id>"))
+ENDPOINT = os.environ.get("SLS_ENDPOINT", _defaults.get("endpoint", "cn-hangzhou.log.aliyuncs.com"))
 
 
 def sign(method, uri_path, query, headers):
@@ -90,7 +91,7 @@ def tstr(r):
 if __name__ == "__main__":
     tid = sys.argv[1]
     hours = int(sys.argv[2]) if len(sys.argv) > 2 else 48
-    logstore = sys.argv[3] if len(sys.argv) > 3 else "inc-backend"
+    logstore = sys.argv[3] if len(sys.argv) > 3 else "<module>-backend"
     now = int(time.time())
     frm, to = now - hours * 3600, now
     print("Logstore: %s | traceId: %s | 窗口近 %d 小时" % (logstore, tid, hours))

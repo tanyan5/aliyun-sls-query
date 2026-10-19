@@ -1,6 +1,6 @@
 ---
 name: aliyun-sls-query
-description: 直接查询阿里云 SLS 日志服务（Log Service）——查 project/logstore 列表、拉取指定时间窗口日志、统计接口请求分布与错误。当用户提到 SLS / 阿里云日志 / k8s-log-xxxx project / 某个容器(如 inc-backend)的日志 / "查一下日志" 时使用。无需安装 SDK，纯 Python 标准库签名调用。
+description: 直接查询阿里云 SLS 日志服务（Log Service）——查 project/logstore 列表、拉取指定时间窗口日志、统计接口请求分布与错误。当用户提到 SLS / 阿里云日志 / k8s-log-<project> project / 某个容器(如 <module>-backend)的日志 / "查一下日志" 时使用。无需安装 SDK，纯 Python 标准库签名调用。
 agent_created: true
 ---
 
@@ -19,23 +19,25 @@ agent_created: true
 
 ### 可选环境变量（配置项，非密，均带默认值）
 
-- `SLS_PROJECT` —— 默认 `k8s-log-c690075cfa6764ccda7b33582e001db23`
-- `SLS_ENDPOINT` —— 默认 `cn-hangzhou.log.aliyuncs.com`
-- `SLS_LOGSTORE` —— 默认 `inc-backend`
+- `SLS_PROJECT` —— 默认读 `scripts/sls_defaults.local.json`（占位 `k8s-log-<project-id>`；公开仓库不含此文件，克隆后需自行指定或自建本地文件）
+- `SLS_ENDPOINT` —— 默认 `cn-hangzhou.log.aliyuncs.com`（占位 `cn-<region>.log.aliyuncs.com`）
+- `SLS_LOGSTORE` —— 默认读 `scripts/sls_defaults.local.json`（占位 `<module>-backend`）
 
 改查询目标时也可直接编辑对应脚本顶部的同名常量。
 
 ## 1.5 已知可访问的 SLS 项目（环境）
 
-本 AK **同时**能访问以下项目（同一组 AK/SK，靠 `SLS_PROJECT` / `SLS_LOGSTORE` 环境变量切换；`sls_probe.py` 也可用 `SLS_PROJECT=xxx` 覆盖后逐个 region 试探）：
+本 AK 可访问其权限范围内的**任意** project / logstore（同一组 AK/SK，靠 `SLS_PROJECT` / `SLS_LOGSTORE` 环境变量切换；`sls_probe.py` 也可用 `SLS_PROJECT=xxx` 覆盖后逐个 region 试探）。项目命名通常为 `k8s-log-<hash>`，模块类 logstore 形如 `<module>-backend`（如 `inc-backend` / `acc-backend` / `interface-backend` 等）。
 
-| 环境 | PROJECT | LOGSTORE | ENDPOINT | 备注 |
+以下仅为**示例**，实际以你的 AK 权限为准（默认值来自本机 `scripts/sls_defaults.local.json`，不随仓库发布，故公开仓库里看不到具体 project 名）：
+
+| 说明 | PROJECT | LOGSTORE | ENDPOINT | 备注 |
 |---|---|---|---|---|
-| UAT / 测试 | `k8s-log-c690075cfa6764ccda7b33582e001db23` | `inc-backend` | `cn-hangzhou.log.aliyuncs.com` | 脚本默认值 |
-| 生产 | `k8s-log-c059c76add58a445da01534a603995df4` | `inc-backend-pro` | `cn-hangzhou.log.aliyuncs.com` | 项目描述「能力中心-生产」，64 个 logstore |
+| 示例·测试 | `k8s-log-<project-id>` | `<module>-backend` | `cn-hangzhou.log.aliyuncs.com` | 占位示例 |
+| 示例·生产 | `k8s-log-<project-id>` | `<module>-backend` | `cn-hangzhou.log.aliyuncs.com` | 占位示例 |
 
-> 切换示例：`SLS_PROJECT=k8s-log-c059c76add58a445da01534a603995df4 SLS_LOGSTORE=inc-backend-pro python sls_search.py ...`
-> 两个环境的 region 都是 `cn-hangzhou`，仅 project/logstore 名不同（生产带 `-pro` 后缀）。
+> 切换示例：`SLS_PROJECT=k8s-log-xxxx SLS_LOGSTORE=acc-backend python sls_search.py ...`
+> region 通常是 `cn-hangzhou`（或你账号所在 region），仅 project/logstore 名不同。
 
 ## 2. 确定 region（最容易卡住的一步）
 
@@ -57,7 +59,7 @@ cd <workspace> && python sls_probe.py
 python sls_analyze.py 15   # 近 15 分钟，参数可改 30/60
 ```
 
-改查询目标时编辑脚本顶部常量：`PROJECT` / `ENDPOINT` / `LOGSTORE`。
+改查询目标用环境变量 `SLS_PROJECT` / `SLS_LOGSTORE` / `SLS_ENDPOINT`，或在本机 `scripts/sls_defaults.local.json` 里指定默认目标（该文件 gitignore，不提交）。
 
 ## 4. 两个必知坑
 

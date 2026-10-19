@@ -1,6 +1,6 @@
 # aliyun-sls-query
 
-WorkBuddy / Agent 技能：直接查询阿里云 SLS 日志服务（无需安装 SDK，纯 Python + 签名），覆盖 inc-backend（UAT/测试）与 inc-backend-pro（生产）等项目的日志检索、traceId 串联、ERROR 统计，以及对 save 类接口做「状态叠加」参数比对。
+WorkBuddy / Agent 技能：直接查询阿里云 SLS 日志服务（无需安装 SDK，纯 Python + 签名），覆盖任意 `<module>-backend` 等项目（如 inc-backend / acc-backend / interface-backend）的日志检索、traceId 串联、ERROR 统计，以及对 save 类接口做「状态叠加」参数比对；project / logstore 通过环境变量切换，可查 AK 权限内的任意目标。
 
 ## 功能
 
@@ -13,11 +13,13 @@ WorkBuddy / Agent 技能：直接查询阿里云 SLS 日志服务（无需安装
 
 详见 `SKILL.md`（含环境常量、region 探测、常见坑位说明）。
 
-## 已知环境
+## 可访问的 SLS 项目（示例，非穷举）
 
-| 环境 | PROJECT | LOGSTORE |
+本 AK 可访问其权限范围内的**任意** project / logstore，靠环境变量 `SLS_PROJECT` / `SLS_LOGSTORE` / `SLS_ENDPOINT` 切换；默认值来自本机 `scripts/sls_defaults.local.json`（gitignore，不随仓库发布）。项目命名通常为 `k8s-log-<hash>`，模块类 logstore 形如 `<module>-backend`（如 `inc-backend` / `acc-backend` / `interface-backend` 等）。
+
+| 说明 | PROJECT | LOGSTORE |
 |---|---|---|
-| UAT / 测试 | `k8s-log-c690075cfa6764ccda7b33582e001db23` | `inc-backend` |
-| 生产 | `k8s-log-c059c76add58a445da01534a603995df4` | `inc-backend-pro` |
+| 示例·测试 | `k8s-log-<project-id>` | `<module>-backend` |
+| 示例·生产 | `k8s-log-<project-id>` | `<module>-backend` |
 
-> 切换方式：`SLS_PROJECT=... SLS_LOGSTORE=... python sls_search.py ...`
+> 切换方式：`SLS_PROJECT=k8s-log-xxxx SLS_LOGSTORE=acc-backend python sls_search.py ...`

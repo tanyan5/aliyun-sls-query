@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""阿里云 SLS 查询 inc-backend 近 15 分钟日志"""
+"""阿里云 SLS 查询指定 logstore 近 15 分钟日志"""
 import sys, json, time, hmac, hashlib, base64, urllib.parse, urllib.request, urllib.error
 from email.utils import formatdate
 
@@ -7,12 +7,13 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import os, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from sls_auth import load_credentials
+from sls_auth import load_credentials, load_defaults
+_defaults = load_defaults()
 AK, SK = load_credentials()
 
-PROJECT  = os.environ.get("SLS_PROJECT", "k8s-log-c690075cfa6764ccda7b33582e001db23")
-ENDPOINT = os.environ.get("SLS_ENDPOINT", "cn-hangzhou.log.aliyuncs.com")
-LOGSTORE = os.environ.get("SLS_LOGSTORE", "inc-backend")
+PROJECT  = os.environ.get("SLS_PROJECT", _defaults.get("project", "k8s-log-<project-id>"))
+ENDPOINT = os.environ.get("SLS_ENDPOINT", _defaults.get("endpoint", "cn-hangzhou.log.aliyuncs.com"))
+LOGSTORE = os.environ.get("SLS_LOGSTORE", _defaults.get("logstore", "<module>-backend"))
 
 
 def sign(method, uri_path, query, headers):

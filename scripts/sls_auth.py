@@ -53,3 +53,21 @@ def load_credentials():
         "  2) 在 ~/.workbuddy/mcp.json 的 mcpServers.alibabacloud-sls.env 中填入\n"
         "  3) 安装 aliyun CLI 并配置 ~/.aliyun/config.json"
     )
+
+
+def load_defaults():
+    """返回本机默认的 SLS 目标（project / logstore / endpoint）。
+
+    来源：与本文件同目录、被 gitignore 的 `sls_defaults.local.json`
+    （仅本机可用，不随仓库发布，故公开仓库不会泄露任何具体 project 名）。
+    克隆仓库后若没有该文件，脚本会回退到占位符默认值，
+    此时必须通过环境变量 SLS_PROJECT / SLS_LOGSTORE / SLS_ENDPOINT 指定目标。
+
+    优先级：环境变量 > 本地 sls_defaults.local.json > 占位符。
+    """
+    p = pathlib.Path(__file__).resolve().parent / "sls_defaults.local.json"
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}

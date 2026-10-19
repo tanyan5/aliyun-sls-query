@@ -6,7 +6,7 @@
   坑 G  增量保存不能两次相减 -> 整单快照=整体替换，增量=按业务主键更新对应行，逐次叠加
   坑 H  操作人(工号)只在行尾 -> 自动用正则提取 operator/IP
 
-用法（默认走 UAT；查生产设环境变量 SLS_PROJECT/SLS_LOGSTORE）：
+用法（默认查本机 sls_defaults.local.json / 环境变量指定的目标；查其他 project / logstore 设环境变量 SLS_PROJECT / SLS_LOGSTORE）：
   python sls_savecompare.py <logstore> <keyword> <hours> [max_lines]
       [--list-key merchandiseListSaveList]
       [--item-key merchandiseCode]
@@ -28,6 +28,9 @@ from collections import OrderedDict, Counter
 sys.stdout.reconfigure(encoding='utf-8')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sls_search import fetch_all, operator_of, endpoint_of, RE_URI, RE_TID, tstr  # noqa
+from sls_auth import load_defaults  # noqa
+
+_DEFAULTS = load_defaults()
 
 
 # ---------- 从日志行中提取参数 JSON（大括号平衡，支持嵌套） ----------
@@ -75,7 +78,7 @@ def extract_param(content, primary="param", list_key="merchandiseListSaveList"):
     """从日志行里截出方法入参 JSON。
 
     常见写法：
-      - `param = {"arg0":{...}}`（inc-backend 的 LogAspect 风格，参数包了一层 arg0）
+      - `param = {"arg0":{...}}`（LogAspect 风格，参数包了一层 arg0）
       - `arg0 = {...}`（直接序列化 args）
     策略：依次尝试锚点 primary -> param -> arg0；仍失败则扫描全文中
     含 list_key 的那个顶层 JSON 对象（最通用兜底）。
@@ -336,7 +339,7 @@ def build_outputs(steps, initial, final, cfg, out_dir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("logstore", nargs="?", default=os.environ.get("SLS_LOGSTORE", "inc-backend"))
+    ap.add_argument("logstore", nargs="?", default=os.environ.get("SLS_LOGSTORE", _DEFAULTS.get("logstore", "<module>-backend")))
     ap.add_argument("keyword", nargs="?", default="saveOrderQuantity")
     ap.add_argument("hours", nargs="?", type=int, default=24)
     ap.add_argument("max_lines", nargs="?", type=int, default=1000)
