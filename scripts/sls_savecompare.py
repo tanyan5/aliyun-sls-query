@@ -10,7 +10,7 @@
   python sls_savecompare.py <logstore> <keyword> <hours> [max_lines]
       [--list-key merchandiseListSaveList]
       [--item-key merchandiseCode]
-      [--owner-key orderCode] [--owner-value BHCG1039HF2258261018-1]
+      [--owner-key orderCode] [--owner-value <订单号>]
       [--name-key merchandiseName]
       [--qty-keys orderQuantity,adjustQuantity]
       [--del-key delMerchandiseCodeList]

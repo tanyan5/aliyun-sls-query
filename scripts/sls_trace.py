@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""定位 storeCode=1_2456 的 syncStoreEstQuantity 请求 -> traceId -> 该链路上的 SQL 及参数"""
+"""定位指定门店的 syncStoreEstQuantity 请求 -> traceId -> 该链路上的 SQL 及参数
+
+用法: python sls_trace.py [hours] <门店号>
+  门店号可传裸号或带业务前缀，脚本统一按「业务前缀 1_ + 门店号」检索。
+"""
 import sys, json, time, hmac, hashlib, base64, urllib.parse, urllib.request, urllib.error, re
 from email.utils import formatdate
 
@@ -88,7 +92,14 @@ def tstr(r):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("用法: python sls_trace.py [hours] <门店号>")
+        print("  例: python sls_trace.py 24 <门店号>   或   python sls_trace.py 24 1_<门店号>")
+        print("  （门店号为必填，裸号会自动补上业务前缀 1_）")
+        sys.exit(1)
     hours = int(sys.argv[1]) if len(sys.argv) > 1 else 24
+    _raw_store = sys.argv[2]
+    STORE = _raw_store if _raw_store.startswith("1_") else "1_" + _raw_store
     now = int(time.time())
     frm, to = now - hours * 3600, now
     print("窗口: %s ~ %s" % (
@@ -97,8 +108,8 @@ if __name__ == "__main__":
 
     recs = fetch_all('syncStoreEstQuantity', frm, to)
     print("syncStoreEstQuantity 命中:", len(recs))
-    hits = [r for r in recs if '1_2456' in r.get('content', '')]
-    print("其中含 1_2456 的请求日志:", len(hits))
+    hits = [r for r in recs if STORE in r.get('content', '')]
+    print("其中含 %s 的请求日志: %d" % (STORE, len(hits)))
     trace_ids = []
     for i, r in enumerate(hits):
         c = r.get('content', '')
@@ -106,8 +117,8 @@ if __name__ == "__main__":
         tid = m.group(1) if m else '?'
         trace_ids.append(tid)
         print("\n=== 请求 [%d] %s trace=%s ===" % (i, tstr(r), tid))
-        print("  storeCode 出现次数:", c.count('1_2456'))
-        for mm in re.finditer(r'.{80}1_2456.{80}', c):
+        print("  storeCode 出现次数:", c.count(STORE))
+        for mm in re.finditer(r'.{80}' + re.escape(STORE) + r'.{80}', c):
             print("   ...", mm.group(0))
         print("   耗时:", re.search(r'耗时 = \[(\d+)\]', c).group(1) if re.search(r'耗时 = \[(\d+)\]', c) else '?')
 

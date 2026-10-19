@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """根据 sls_savecompare.py 的产物，生成报货单改动汇总 HTML（自包含、可直接分享）。
 
-样式 1:1 沿用第一版（BHCG1039HF2258261018-1 的 gen_report.py）；
+样式 1:1 沿用第一版（首份报货单改动汇报 HTML 的样式）；
 数据从 savecompare_raw.json 重放状态叠加重建时间线（修复 changes.csv 端点/分步 bug），
 净变更/新增/删除取自已验证的 savecompare_final_vs_initial.csv。
 
@@ -25,8 +25,8 @@ import json
 
 # ---------- 参数 ----------
 ap = argparse.ArgumentParser()
-ap.add_argument("--order", required=True, help="报货单号，例如 BHCG1039HF2503261019-1")
-ap.add_argument("--store", required=True, help="门店 storeCode，例如 1_2503")
+ap.add_argument("--order", required=True, help="报货单号，例如 <订单号>")
+ap.add_argument("--store", required=True, help="门店 storeCode（带业务前缀，如 1_<门店号>）")
 ap.add_argument("--src", default="（阿里云 SLS）",
                 help="数据来源描述，例如 <module>-backend（阿里云 SLS）")
 ap.add_argument("--window", default="", help="时间窗口描述，例如 2026-10-19 00:00:00 ~ 2026-10-19 12:35")
